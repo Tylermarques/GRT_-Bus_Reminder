@@ -27,7 +27,7 @@ int ANIMATE_COUNT = 6;
 
 int ERR_CODE[] = {
   255, // Blank
-  127, // E
+  44, // E
   119, // r
   119, // r
 };
@@ -64,7 +64,7 @@ int latchPin = 5;
 int clockPin = 16;
 ////Pin connected to DS of 74HC595
 int dataPin = 4;
-
+int infoArray[3] = {0, 0, 0};
 
 #include <Arduino.h>
 
@@ -74,9 +74,21 @@ int dataPin = 4;
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 
+#define FASTLED_ESP8266_RAW_PIN_ORDER
+#include <FastLED.h>
+#include <TimedAction.h>
+
+
+
+#define LED_PIN    2
+#define NUM_LEDS   4
+
 #define USE_SERIAL Serial
 
 ESP8266WiFiMulti WiFiMulti;
+
+
+CRGB leds[NUM_LEDS];
 
 void setup() {
   USE_SERIAL.begin(115200);
@@ -94,15 +106,22 @@ void setup() {
     delay(100);
   }
 
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+
 }
 
 void loop() {
-  int infoArray[3] = {0, 0, 0};
+  lightsTest();
+  showError();
+  
   unsigned long startMillis = millis();
   getBusInfo(infoArray);
-  Serial.printf("infoArray Vals: %d | %d | %d \n", infoArray[0], infoArray[1], infoArray[2]);
+  if (infoArray[0] == 0){
+    delay(1000);
+    return;
+  }
   while (true) {
-    showRouteId(infoArray[0], 5); 
+    showRouteId(infoArray[0], 5);
     showTime((infoArray[1] - infoArray[2]), 10);
     if (((millis() - startMillis) / 1000) > refreshTime) {
       break;
@@ -164,6 +183,17 @@ void getBusInfo(int *info) {
   }
 }
 
+void lightsTest() {
+  for (int n=0; n<3; n++){
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CRGB(255, 0, 0);
+    FastLED.show();
+    delay(250);
+    leds[i] = CRGB(0, 0, 0);
+    FastLED.show();
+  }
+  }
+}
 void displayError(int i) {
   digitalWrite(latchPin, LOW);
   shiftOut(dataPin, clockPin, ERR_CODE[i]);
@@ -194,9 +224,16 @@ void displayAnimation(int part) {
 }
 
 void showError() {
+  unsigned long startMillis = millis();
   while (true) {
     for (int i = 0; i < ERR_COUNT; i++) {
       displayError(i);
+      digitalWrite(powerPins[i], HIGH);
+    delay(brightWait);
+    digitalWrite(powerPins[i], LOW);
+    }
+    if (((millis() - startMillis) / 1000) > 5) {
+      break;
     }
   }
 }
@@ -208,7 +245,7 @@ void showTime(int timeInSecs, int dispTime) {
   int curSecs;
   while (true) {
     curSecs = timeInSecs - ((millis() - startMillis) / 1000);
-//    Serial.printf("curSecs = %d \t| curMillis = %d", curSecs, millis());
+    //    Serial.printf("curSecs = %d \t| curMillis = %d", curSecs, millis());
     mins = curSecs / 60;
     secs = curSecs % 60;
     // Run display for period of time before
