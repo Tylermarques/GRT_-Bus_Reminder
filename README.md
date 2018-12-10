@@ -33,7 +33,9 @@ You can find the design for the box I 3D printed <a href="https://a360.co/2RK5xd
 <li> Add options as global vars to top of main.ino so that they are easy to change 
 <ul> <li> Display time of routeId and arrival countdown</li></ul>
 <li> Add Pictures to readme </li>
+<li> Add code to turn off at night, e.g. if there are no busses left, go to sleep until the morning. </li>
 </ul>
 
 <h2> Credits </h2>
 Big thanks to <a href="https://github.com/nwoodthorpe">Nathaniel Woodthorpe</a> and his creating and hosting of a GRT API.
+

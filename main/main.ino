@@ -1,6 +1,6 @@
 //TODO: Write err code for display when no busses to display
-//TODO: Add in code for RGB LEDs
-//TODO:
+//TODO: Add code to sleep if it's in the middle of the night. 
+
 
 
 int brightWait = 5; //Time to wait (in ms) before turning on and off LED
@@ -27,7 +27,7 @@ int ANIMATE_COUNT = 6;
 
 int ERR_CODE[] = {
   255, // Blank
-  44, // E
+  52, // E
   119, // r
   119, // r
 };
@@ -76,7 +76,6 @@ int infoArray[3] = {0, 0, 0};
 
 #define FASTLED_ESP8266_RAW_PIN_ORDER
 #include <FastLED.h>
-#include <TimedAction.h>
 
 
 
@@ -91,6 +90,8 @@ ESP8266WiFiMulti WiFiMulti;
 CRGB leds[NUM_LEDS];
 
 void setup() {
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+  setLights(0,0,0,0);
   USE_SERIAL.begin(115200);
 
   WiFi.mode(WIFI_STA);
@@ -106,20 +107,19 @@ void setup() {
     delay(100);
   }
 
-  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+  
 
 }
 
 void loop() {
-  lightsTest();
-  showError();
-  
+
   unsigned long startMillis = millis();
   getBusInfo(infoArray);
-  if (infoArray[0] == 0){
+  if (infoArray[0] == 0) {
     delay(1000);
     return;
   }
+  updateLights((infoArray[1] - infoArray[2]), 0.5); //1 is full brightness, 0.5 is half, etc. 
   while (true) {
     showRouteId(infoArray[0], 5);
     showTime((infoArray[1] - infoArray[2]), 10);
@@ -127,6 +127,7 @@ void loop() {
       break;
     }
   }
+  
 
 }
 
@@ -183,15 +184,23 @@ void getBusInfo(int *info) {
   }
 }
 
-void lightsTest() {
-  for (int n=0; n<3; n++){
+void setLights(int red, int green, int blue, float brightness) {
+  Serial.printf("Light brightness set to %0.2f % \n", brightness);
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CRGB(255, 0, 0);
-    FastLED.show();
-    delay(250);
-    leds[i] = CRGB(0, 0, 0);
-    FastLED.show();
+    leds[i] = CRGB(red * brightness, green * brightness , blue * brightness);
   }
+  FastLED.show();
+}
+
+void updateLights(int timeInSecs, int brightness) {
+  if (timeInSecs < 300) {
+    if (timeInSecs < 180) {
+      setLights(255, 0, 0, brightness);
+    } else {
+      setLights(247, 168, 71, brightness);
+    }
+  } else {
+    setLights(0, 255, 0, brightness);
   }
 }
 void displayError(int i) {
@@ -229,8 +238,8 @@ void showError() {
     for (int i = 0; i < ERR_COUNT; i++) {
       displayError(i);
       digitalWrite(powerPins[i], HIGH);
-    delay(brightWait);
-    digitalWrite(powerPins[i], LOW);
+      delay(brightWait);
+      digitalWrite(powerPins[i], LOW);
     }
     if (((millis() - startMillis) / 1000) > 5) {
       break;
